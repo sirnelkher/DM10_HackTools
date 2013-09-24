@@ -56,16 +56,35 @@ int compareChunkOffset(const void *v1, const void *v2)
 }
 
 /* Instrument */
-struct romNoteStruct {
-	char Len[4];
-	char Dinamica_001[16];
+struct romInstNoteDynStruct {
+	uint8_t X01;
+	uint8_t X02;
+	uint8_t NumberOfDynamics;
+	uint8_t X04;
+};
+struct romInstNoteDynSampStruct {
+	uint16_t SampleIndex;
+	uint8_t Volume;
+	uint8_t DynIni;
+	uint8_t DynEnd;
+	uint8_t X01_Ini;
+	uint8_t X01_End;
+	uint8_t Channel;
+	uint8_t X02_Ini;
+	uint8_t X02_End;
+	uint8_t X03_Ini;
+	uint8_t X03_End;
+	uint8_t X04_Ini;
+	uint8_t X04_End;
+	uint8_t X05_Ini;
+	uint8_t X05_End;
 };
 
 /* Main */
 int main(int argc, char **argv)
 {
 //check param
-    uint32_t i = 0, ii = 0;
+    uint32_t i = 0, ii = 0, iii = 0;
 	uint32_t k = 0, kk = 0;
 	uint32_t limitList = 10;
 	int fChr = '\0';
@@ -407,68 +426,7 @@ int main(int argc, char **argv)
 		}
 	}
 	
-//Rom, JSON Make
-	printf("\n > Rom, Save Attributes...");
-	cJSON *jsonObjRoot;
-	jsonObjRoot = cJSON_CreateObject();	
-		cJSON_AddItemToObject(jsonObjRoot, "RomLocation", cJSON_CreateString(fRomName));
-		cJSON_AddItemToObject(jsonObjRoot, "RomTotalOfBytes", cJSON_CreateNumber(romTotalOfBytes));
-		cJSON_AddItemToObject(jsonObjRoot, "NumberOfChunks", cJSON_CreateNumber(romChunkCount));		
-		cJSON *jsonArrayChunk, *jsonObjChunk;
-		cJSON_AddItemToObject(jsonObjRoot, "ListOfChunks", jsonArrayChunk = cJSON_CreateArray());
-		for ( k = 0; k<romChunkCount; k++ ) {
-			cJSON_AddItemToArray(jsonArrayChunk, jsonObjChunk = cJSON_CreateObject());
-				cJSON_AddNumberToObject(jsonObjChunk, "Index", romChunk[k].Index);
-				cJSON_AddNumberToObject(jsonObjChunk, "OffSet", romChunk[k].OffSet);
-				cJSON_AddNumberToObject(jsonObjChunk, "Length", romChunk[k].Length);
-				cJSON_AddStringToObject(jsonObjChunk, "Name", romChunk[k].Name);
-				cJSON_AddNumberToObject(jsonObjChunk, "Address", romChunk[k].Address);
-			if ( strcmp(romChunk[k].Name,"INST TBL") == 0 ) {
-				cJSON *jsonArrayInstTbl, *jsonObjInstTbl;
-				cJSON_AddItemToObject(jsonObjChunk, "ListOfInstruments", jsonArrayInstTbl = cJSON_CreateArray());
-					for ( kk = 0; kk<romChunkInstTblCount; kk++ ) {
-						cJSON_AddItemToArray(jsonArrayInstTbl, jsonObjInstTbl = cJSON_CreateObject());
-							cJSON_AddNumberToObject(jsonObjInstTbl, "Index", romChunkInstTbl[kk].Index);
-							cJSON_AddNumberToObject(jsonObjInstTbl, "OffSet", romChunkInstTbl[kk].OffSet);
-							cJSON_AddNumberToObject(jsonObjInstTbl, "Length", romChunkInstTbl[kk].Length);
-							cJSON_AddStringToObject(jsonObjInstTbl, "Name", romChunkInstTbl[kk].Name);
-							cJSON_AddNumberToObject(jsonObjInstTbl, "Address", romChunkInstTbl[kk].Address);
-					}
-			}
-			if ( strcmp(romChunk[k].Name,"SAMP TBL") == 0 ) {
-				cJSON *jsonArraySampTbl, *jsonObjSampTbl;
-				cJSON_AddItemToObject(jsonObjChunk, "ListOfSamples", jsonArraySampTbl = cJSON_CreateArray());
-					for ( kk = 0; kk<romChunkSampTblCount; kk++ ) {
-						cJSON_AddItemToArray(jsonArraySampTbl, jsonObjSampTbl = cJSON_CreateObject());
-							cJSON_AddNumberToObject(jsonObjSampTbl, "Index", romChunkSampTbl[kk].Index);
-							cJSON_AddNumberToObject(jsonObjSampTbl, "OffSet", romChunkSampTbl[kk].OffSet);
-							cJSON_AddNumberToObject(jsonObjSampTbl, "Length", romChunkSampTbl[kk].Length);
-							cJSON_AddStringToObject(jsonObjSampTbl, "Name", romChunkSampTbl[kk].Name);
-							cJSON_AddNumberToObject(jsonObjSampTbl, "Address", romChunkSampTbl[kk].Address);
-							cJSON_AddNumberToObject(jsonObjSampTbl, "PayloadSize", romChunkSampTbl[kk].PayloadSize);
-							cJSON_AddNumberToObject(jsonObjSampTbl, "PayloadRate", romChunkSampTbl[kk].PayloadRate);
-							cJSON_AddNumberToObject(jsonObjSampTbl, "PayloadChannel", romChunkSampTbl[kk].PayloadChannel);
-					}
-			}
-		}		
-//Rom, JSON Save
-	char *jsonTextChunk;
-	jsonTextChunk = cJSON_Print(jsonObjRoot);
-	snprintf(fDestinyName, 256, "%s/", argv[1]);
-	mkdir(fDestinyName, 0777);
-	snprintf(fDestinyName, 256, "%s/index.json", argv[1]);
-	if ((fDestinyHandler = fopen(fDestinyName, "w")) == NULL) {
-		fprintf(stderr, "\nError %d: Fail to open file %s: %s.\n", errno, fDestinyName, strerror(errno));
-		return (-1);
-	}
-	fputs(jsonTextChunk, fDestinyHandler);
-	fclose(fDestinyHandler);
-	//printf("\n%s\n",jsonTextChunk);
-	cJSON_Delete(jsonObjRoot);
-	free(jsonTextChunk);
-/**/	
-	
-//Rom, Chunk, InstTbl, Extract Files
+/*/Rom, Chunk, InstTbl, Extract Files
 	printf("\n\n > Rom, InstTbl, Creating Directorys...");
 	snprintf(fDestinyName, 256, "%s/", argv[1]);
 	mkdir(fDestinyName, 0777);
@@ -545,16 +503,68 @@ int main(int argc, char **argv)
 		}
 	
 	//Split File Notes Rom
-		for ( ii = 0; ii<romChunkInstTblNotesCount; ii++ ) {
+		//Rom, Chunk, SampTbl, Retry List
+		struct romInstNoteDynStruct *romInstNoteDyn = malloc(romChunkInstTblNotesCount*sizeof(struct romInstNoteDynStruct));
+		struct romInstNoteDynSampStruct *romInstNoteDynSamp = malloc(romChunkInstTblNotesCount*40*sizeof(struct romInstNoteDynSampStruct));
+		printf("\n > romChunkInstTblNotesCount: %d", romChunkInstTblNotesCount);
+		printf("\n > romInstNoteDyn: %d", sizeof(romInstNoteDyn));
+		printf("\n > romInstNoteDynSamp: %d", sizeof(romInstNoteDynSamp));
+		for ( iii = 0; iii<romChunkInstTblNotesCount; iii++ ) {
 		//Create File ROM
-			fseek(fRomHandler, (romChunkInstTbl[k].Address+22+(644*ii)), SEEK_SET );
-			snprintf(fDestinyName, 256, "%s/INSTTBL/Type_%d/%d_%.12s/%d_%.12s_Note_%d.rom", argv[1], romChunkInstTblType, romChunkInstTbl[k].Index, romChunkInstTbl[k].Name, romChunkInstTbl[k].Index, romChunkInstTbl[k].Name, ii);
+			fseek(fRomHandler, (romChunkInstTbl[k].Address+22+(644*iii)), SEEK_SET );
+			snprintf(fDestinyName, 256, "%s/INSTTBL/Type_%d/%d_%.12s/%d_%.12s_Note_%d.rom", argv[1], romChunkInstTblType, romChunkInstTbl[k].Index, romChunkInstTbl[k].Name, romChunkInstTbl[k].Index, romChunkInstTbl[k].Name, iii);
 			if ((fDestinyHandler = fopen(fDestinyName, "w")) == NULL) {
 				fprintf(stderr, "\nError %d: Fail to open file %s: %s.\n", errno, fDestinyName, strerror(errno));
 				return (-1);
 			}
 		//Raw Data
-			for ( i = 0; i<644; i++ ) {
+			for ( i = 0; i<4; i++ ) {
+				fChr = fgetc(fRomHandler);
+				if (fChr != EOF) {
+					fputc( fChr, fDestinyHandler);
+				} else {
+					i = romChunkInstTbl[k].Length;
+					k = romChunkInstTblCount;
+				}
+				if ( i == 0 ) {
+					romInstNoteDyn[iii].X01 = 0;
+					romInstNoteDyn[iii].X01 |= fChr;
+				}
+				if ( i == 1 ) {
+					romInstNoteDyn[iii].X02 = 0;
+					romInstNoteDyn[iii].X02 |= fChr;
+				}
+				if ( i == 2 ) {
+					romInstNoteDyn[iii].NumberOfDynamics = 0;
+					romInstNoteDyn[iii].NumberOfDynamics |= fChr;
+				}
+				if ( i == 3 ) {
+					romInstNoteDyn[iii].X04 = 0;
+					romInstNoteDyn[iii].X04 |= fChr;
+				}
+			}
+		//Raw Data
+			for ( ii = 0; ii<40; ii++ ) {
+				romInstNoteDynSamp[ii+(iii*40)].SampleIndex = 0;
+				for ( i = 0; i<2; i++ ) {
+					romInstNoteDynSamp[ii+(iii*40)].SampleIndex |= fgetc(fRomHandler);
+				}
+				romInstNoteDynSamp[ii+(iii*40)].Volume = fgetc(fRomHandler);
+				romInstNoteDynSamp[ii+(iii*40)].DynIni = fgetc(fRomHandler);
+				romInstNoteDynSamp[ii+(iii*40)].DynEnd = fgetc(fRomHandler);
+				romInstNoteDynSamp[ii+(iii*40)].X01_Ini = fgetc(fRomHandler);
+				romInstNoteDynSamp[ii+(iii*40)].X01_End = fgetc(fRomHandler);
+				romInstNoteDynSamp[ii+(iii*40)].Channel = fgetc(fRomHandler);
+				romInstNoteDynSamp[ii+(iii*40)].X02_Ini = fgetc(fRomHandler);
+				romInstNoteDynSamp[ii+(iii*40)].X02_End = fgetc(fRomHandler);
+				romInstNoteDynSamp[ii+(iii*40)].X03_Ini = fgetc(fRomHandler);
+				romInstNoteDynSamp[ii+(iii*40)].X03_End = fgetc(fRomHandler);
+				romInstNoteDynSamp[ii+(iii*40)].X04_Ini = fgetc(fRomHandler);
+				romInstNoteDynSamp[ii+(iii*40)].X04_End = fgetc(fRomHandler);
+				romInstNoteDynSamp[ii+(iii*40)].X04_Ini = fgetc(fRomHandler);
+				romInstNoteDynSamp[ii+(iii*40)].X04_End = fgetc(fRomHandler);
+			}
+			for ( ii = 0; ii<(40*16); ii++ ) {
 				fChr = fgetc(fRomHandler);
 				if (fChr != EOF) {
 					fputc( fChr, fDestinyHandler);
@@ -563,11 +573,74 @@ int main(int argc, char **argv)
 					k = romChunkInstTblCount;
 				}
 			}
+		//Close
+			fclose(fDestinyHandler);			
 		}
-	//Close
-		fclose(fDestinyHandler);
+		return ;
 	} /**/	
 	return ;
+	
+	
+//Rom, JSON Make
+	printf("\n > Rom, Save Attributes...");
+	cJSON *jsonObjRoot;
+	jsonObjRoot = cJSON_CreateObject();	
+		cJSON_AddItemToObject(jsonObjRoot, "RomLocation", cJSON_CreateString(fRomName));
+		cJSON_AddItemToObject(jsonObjRoot, "RomTotalOfBytes", cJSON_CreateNumber(romTotalOfBytes));
+		cJSON_AddItemToObject(jsonObjRoot, "NumberOfChunks", cJSON_CreateNumber(romChunkCount));		
+		cJSON *jsonArrayChunk, *jsonObjChunk;
+		cJSON_AddItemToObject(jsonObjRoot, "ListOfChunks", jsonArrayChunk = cJSON_CreateArray());
+		for ( k = 0; k<romChunkCount; k++ ) {
+			cJSON_AddItemToArray(jsonArrayChunk, jsonObjChunk = cJSON_CreateObject());
+				cJSON_AddNumberToObject(jsonObjChunk, "Index", romChunk[k].Index);
+				cJSON_AddNumberToObject(jsonObjChunk, "OffSet", romChunk[k].OffSet);
+				cJSON_AddNumberToObject(jsonObjChunk, "Length", romChunk[k].Length);
+				cJSON_AddStringToObject(jsonObjChunk, "Name", romChunk[k].Name);
+				cJSON_AddNumberToObject(jsonObjChunk, "Address", romChunk[k].Address);
+			if ( strcmp(romChunk[k].Name,"INST TBL") == 0 ) {
+				cJSON *jsonArrayInstTbl, *jsonObjInstTbl;
+				cJSON_AddItemToObject(jsonObjChunk, "ListOfInstruments", jsonArrayInstTbl = cJSON_CreateArray());
+					for ( kk = 0; kk<romChunkInstTblCount; kk++ ) {
+						cJSON_AddItemToArray(jsonArrayInstTbl, jsonObjInstTbl = cJSON_CreateObject());
+							cJSON_AddNumberToObject(jsonObjInstTbl, "Index", romChunkInstTbl[kk].Index);
+							cJSON_AddNumberToObject(jsonObjInstTbl, "OffSet", romChunkInstTbl[kk].OffSet);
+							cJSON_AddNumberToObject(jsonObjInstTbl, "Length", romChunkInstTbl[kk].Length);
+							cJSON_AddStringToObject(jsonObjInstTbl, "Name", romChunkInstTbl[kk].Name);
+							cJSON_AddNumberToObject(jsonObjInstTbl, "Address", romChunkInstTbl[kk].Address);
+					}
+			}
+			if ( strcmp(romChunk[k].Name,"SAMP TBL") == 0 ) {
+				cJSON *jsonArraySampTbl, *jsonObjSampTbl;
+				cJSON_AddItemToObject(jsonObjChunk, "ListOfSamples", jsonArraySampTbl = cJSON_CreateArray());
+					for ( kk = 0; kk<romChunkSampTblCount; kk++ ) {
+						cJSON_AddItemToArray(jsonArraySampTbl, jsonObjSampTbl = cJSON_CreateObject());
+							cJSON_AddNumberToObject(jsonObjSampTbl, "Index", romChunkSampTbl[kk].Index);
+							cJSON_AddNumberToObject(jsonObjSampTbl, "OffSet", romChunkSampTbl[kk].OffSet);
+							cJSON_AddNumberToObject(jsonObjSampTbl, "Length", romChunkSampTbl[kk].Length);
+							cJSON_AddStringToObject(jsonObjSampTbl, "Name", romChunkSampTbl[kk].Name);
+							cJSON_AddNumberToObject(jsonObjSampTbl, "Address", romChunkSampTbl[kk].Address);
+							cJSON_AddNumberToObject(jsonObjSampTbl, "PayloadSize", romChunkSampTbl[kk].PayloadSize);
+							cJSON_AddNumberToObject(jsonObjSampTbl, "PayloadRate", romChunkSampTbl[kk].PayloadRate);
+							cJSON_AddNumberToObject(jsonObjSampTbl, "PayloadChannel", romChunkSampTbl[kk].PayloadChannel);
+					}
+			}
+		}		
+//Rom, JSON Save
+	char *jsonTextChunk;
+	jsonTextChunk = cJSON_Print(jsonObjRoot);
+	snprintf(fDestinyName, 256, "%s/", argv[1]);
+	mkdir(fDestinyName, 0777);
+	snprintf(fDestinyName, 256, "%s/index.json", argv[1]);
+	if ((fDestinyHandler = fopen(fDestinyName, "w")) == NULL) {
+		fprintf(stderr, "\nError %d: Fail to open file %s: %s.\n", errno, fDestinyName, strerror(errno));
+		return (-1);
+	}
+	fputs(jsonTextChunk, fDestinyHandler);
+	fclose(fDestinyHandler);
+	//printf("\n%s\n",jsonTextChunk);
+	cJSON_Delete(jsonObjRoot);
+	free(jsonTextChunk);
+/**/
 	
 /*/Rom, Chunk, Pgms, Extract Files
 	printf("\n\n > Rom, Pgms, Creating Directorys...");
