@@ -5,7 +5,7 @@
  *
  * Compile:
  *      cd /Users/fmgdias/Dropbox/Desenvolvimento/DM10/DM10_HackTools/DM10_syx2payload/ ;
- *      gcc syx2payload.c -o syx2payload && /syx2payload ../../syx/sound/DM10_sound_rom-V1.03 ;
+ *      gcc syx2payload.c -o syx2payload && ./syx2payload ../../syx/sound/DM10_sound_rom-V1.03 ;
  *************************************************************************************************************/
 
 /* Bibliotecas */

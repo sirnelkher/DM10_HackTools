@@ -411,7 +411,7 @@ int main(int argc, char **argv)
         printf(" 0x%8.8X |", romChunkPgms[k].Length);
         printf(" 0x%8.8X |", romChunkPgms[k].Address);
         printf("\n");
-    } 
+    }
     /* */
 
     //Rom, Chunk, SampTbl, Adress
@@ -678,7 +678,7 @@ int main(int argc, char **argv)
             }
         //Close
             fclose(fDestinyHandler);
-        } 
+        }
     / **/
 
     //Rom, Chunk, Inst Tbl, Split Files
@@ -763,6 +763,8 @@ int main(int argc, char **argv)
             fputs(fInstTblBuffer, fInstTblHandler);
         }
         fputs("\n", fInstTblHandler);
+        //Close
+        fclose(fDestinyHandler);
         //Split File Notes Rom
         for ( iii = 0; iii < romChunkInstTblNotesCount; iii++ )
         {
@@ -1058,7 +1060,6 @@ int main(int argc, char **argv)
         //Close
         fclose(fDestinyHandler);
     }
-
     //Finished
     printf("\n\n > Finished!");
     printf("\n");
